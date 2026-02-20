@@ -1,6 +1,6 @@
 // 資料記錄模組
 
-import * as Device from 'expo-device';
+import { Platform } from 'react-native';
 
 export class DataRecorder {
   constructor() {
@@ -17,19 +17,14 @@ export class DataRecorder {
   }
 
   /**
-   * 初始化裝置資訊
+   * 初始化裝置資訊（簡化版本，不使用 expo-device）
    */
   async initializeDeviceInfo() {
     this.deviceInfo = {
-      brand: Device.brand,
-      manufacturer: Device.manufacturer,
-      modelName: Device.modelName,
-      modelId: Device.modelId,
-      deviceName: Device.deviceName,
-      osName: Device.osName,
-      osVersion: Device.osVersion,
-      platformApiLevel: Device.platformApiLevel,
-      deviceYearClass: Device.deviceYearClass,
+      platform: Platform.OS,
+      version: Platform.Version,
+      // 簡化版本：不包含詳細裝置資訊
+      // 如需完整資訊，可安裝 expo-device
     };
   }
 

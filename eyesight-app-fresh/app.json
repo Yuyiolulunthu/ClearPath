@@ -25,5 +25,10 @@
   "devDependencies": {
     "@babel/core": "^7.20.0"
   },
-  "private": true
+  "private": true,
+  "extra": {
+    "eas": {
+      "projectId": "692a1e4b-e0cb-4036-a853-88aafb5a43b4"
+    }
+  }
 }
