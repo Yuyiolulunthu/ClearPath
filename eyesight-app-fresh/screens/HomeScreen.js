@@ -19,56 +19,25 @@ export default function HomeScreen({ navigation }) {
       id: 1,
       name: 'Alice Chen',
       rating: 5,
-      comment: '測試流程專業，結果詳細，品質評分很有參考價值！',
+      comment: 'Professional testing process with detailed quality scoring. Highly recommended!',
     },
     {
       id: 2,
       name: 'Bob Wang',
-      rating: 4,
-      comment: '視標動態縮放很厲害，測試體驗很好',
+      rating: 5,
+      comment: 'The dynamic optotype scaling is amazing. Very accurate results.',
     },
     {
       id: 3,
       name: 'Carol Lin',
-      rating: 5,
-      comment: 'LCA 和 DoF 校正讓結果更準確，值得信賴',
+      rating: 4,
+      comment: 'LCA and DoF corrections make the results more reliable.',
     },
   ]);
 
-  const articles = [
-    {
-      id: 1,
-      icon: '📐',
-      title: '系統架構說明',
-      abstract: '技術文檔',
-      content: '了解完整的五大核心模組：距離估測、視標控制、視力測試、屈光轉換、品質控制。',
-      badge: '專業',
-      color: '#e3f2fd',
-    },
-    {
-      id: 2,
-      icon: '🔬',
-      title: '測量原理解析',
-      abstract: '科學原理',
-      content: '深入理解幾何光學模型、LCA校正、DoF線性校正等核心技術。',
-      badge: '進階',
-      color: '#f3e5f5',
-    },
-    {
-      id: 3,
-      icon: '💡',
-      title: '使用最佳實踐',
-      abstract: '操作指南',
-      content: '如何保持穩定距離、選擇良好光線環境，獲得最準確的測量結果。',
-      badge: '必讀',
-      color: '#fff3e0',
-    },
-  ];
-
-  // 模擬最近測試結果
   const recentTest = {
-    date: '2024-02-20',
-    eye: 'right',
+    date: 'Feb 20, 2024',
+    eye: 'Right Eye',
     spherical: -2.15,
     visualAcuity: '20/25',
     logMAR: 0.10,
@@ -76,16 +45,74 @@ export default function HomeScreen({ navigation }) {
     grade: 'EXCELLENT',
   };
 
+  const features = [
+    {
+      icon: '📏',
+      title: 'Distance Estimation',
+      subtitle: 'Geometric optical model',
+      formula: 'd = k / s',
+      color: '#667eea',
+    },
+    {
+      icon: '🎯',
+      title: 'Optotype Control',
+      subtitle: 'Constant visual angle',
+      formula: 'H(t) = α₀·d(t)',
+      color: '#f093fb',
+    },
+    {
+      icon: '👁️',
+      title: 'Visual Acuity',
+      subtitle: 'Adaptive staircase',
+      formula: 'logMAR',
+      color: '#4facfe',
+    },
+    {
+      icon: '🔬',
+      title: 'Refraction',
+      subtitle: 'LCA + DoF correction',
+      formula: 'v = -1/d',
+      color: '#43e97b',
+    },
+  ];
+
+  const articles = [
+    {
+      id: 1,
+      icon: '📚',
+      title: 'System Architecture',
+      description: 'Learn about the five core modules and technical specifications',
+      badge: 'Technical',
+      color: '#e3f2fd',
+    },
+    {
+      id: 2,
+      icon: '🔬',
+      title: 'Measurement Principles',
+      description: 'Understanding optical models and refraction calculations',
+      badge: 'Advanced',
+      color: '#f3e5f5',
+    },
+    {
+      id: 3,
+      icon: '💡',
+      title: 'Best Practices',
+      description: 'Tips for achieving the most accurate measurements',
+      badge: 'Guide',
+      color: '#fff3e0',
+    },
+  ];
+
   const renderStars = (rating) => {
     return '⭐'.repeat(rating);
   };
 
   const getQualityColor = (grade) => {
     const colors = {
-      'EXCELLENT': '#4CAF50',
-      'GOOD': '#8BC34A',
-      'FAIR': '#FFC107',
-      'POOR': '#FF9800',
+      'EXCELLENT': '#10b981',
+      'GOOD': '#84cc16',
+      'FAIR': '#f59e0b',
+      'POOR': '#ef4444',
     };
     return colors[grade] || '#666';
   };
@@ -93,235 +120,271 @@ export default function HomeScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.userInfo}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>👤</Text>
-            </View>
-            <View>
-              <Text style={styles.userName}>專業視力檢測</Text>
-              <Text style={styles.userId}>Professional Vision Testing</Text>
-            </View>
-          </View>
-          <View style={styles.proBadge}>
-            <Text style={styles.proText}>Pro</Text>
-          </View>
+      
+      {/* Modern Header */}
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.headerTitle}>Vision Testing</Text>
+          <Text style={styles.headerSubtitle}>Professional Eye Care</Text>
         </View>
+        <View style={styles.proBadge}>
+          <Text style={styles.proText}>PRO</Text>
+        </View>
+      </View>
 
-        {/* Featured Banner */}
-        <View style={styles.newsSection}>
-          <View style={styles.bannerContent}>
-            <Text style={styles.bannerTitle}>🔬 技術驅動的精準測量</Text>
-            <Text style={styles.bannerSubtitle}>
-              基於光學原理與計算機視覺的專業系統
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Hero Section */}
+        <View style={styles.heroSection}>
+          <View style={styles.heroCard}>
+            <Text style={styles.heroTitle}>Precision Vision Testing</Text>
+            <Text style={styles.heroSubtitle}>
+              Advanced optical analysis with AI-powered measurements
             </Text>
-            <View style={styles.techBadges}>
-              <View style={styles.techBadge}>
-                <Text style={styles.techBadgeText}>d = k/s</Text>
+            <View style={styles.heroBadges}>
+              <View style={styles.heroBadge}>
+                <Text style={styles.heroBadgeText}>Landolt C</Text>
               </View>
-              <View style={styles.techBadge}>
-                <Text style={styles.techBadgeText}>LCA + DoF</Text>
+              <View style={styles.heroBadge}>
+                <Text style={styles.heroBadgeText}>Staircase</Text>
               </View>
-              <View style={styles.techBadge}>
-                <Text style={styles.techBadgeText}>Staircase</Text>
+              <View style={styles.heroBadge}>
+                <Text style={styles.heroBadgeText}>0-100 QC</Text>
               </View>
             </View>
           </View>
-          <View style={styles.dotsContainer}>
-            <View style={[styles.dot, styles.activeDot]} />
-            <View style={styles.dot} />
-            <View style={styles.dot} />
-          </View>
         </View>
 
-        {/* Terms */}
-        <TouchableOpacity style={styles.termsButton}>
-          <Text style={styles.termsIcon}>⚠️</Text>
-          <Text style={styles.termsText}>
-            本系統為研究輔助工具，測量結果僅供參考
-          </Text>
-        </TouchableOpacity>
-
-        {/* Action Buttons */}
-        <View style={styles.actionButtons}>
+        {/* Quick Actions */}
+        <View style={styles.section}>
           <TouchableOpacity
-            style={[styles.button, styles.primaryButton]}
+            style={styles.primaryAction}
             onPress={() => navigation.navigate('EyesightTest')}
-            activeOpacity={0.8}
+            activeOpacity={0.85}
           >
-            <Text style={styles.buttonIcon}>👁️</Text>
-            <Text style={styles.buttonText}>開始專業檢測</Text>
-            <Text style={styles.buttonSubtext}>完整測量流程</Text>
+            <View style={styles.actionIcon}>
+              <Text style={styles.actionIconText}>👁️</Text>
+            </View>
+            <View style={styles.actionContent}>
+              <Text style={styles.actionTitle}>Start Professional Test</Text>
+              <Text style={styles.actionSubtitle}>
+                Complete vision & refraction measurement
+              </Text>
+            </View>
+            <Text style={styles.actionArrow}>→</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.button, styles.secondaryButton]}
-            onPress={() => navigation.navigate('BuyGlasses')}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.buttonIcon}>🕶️</Text>
-            <Text style={styles.buttonText}>選購眼鏡</Text>
-            <Text style={styles.buttonSubtext}>專業配鏡</Text>
-          </TouchableOpacity>
+
+          <View style={styles.secondaryActions}>
+            <TouchableOpacity
+              style={styles.secondaryAction}
+              onPress={() => navigation.navigate('BuyGlasses')}
+              activeOpacity={0.85}
+            >
+              <View style={styles.secondaryIcon}>
+                <Text style={styles.secondaryIconText}>🕶️</Text>
+              </View>
+              <Text style={styles.secondaryTitle}>Shop Glasses</Text>
+              <Text style={styles.secondarySubtitle}>Premium eyewear</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.secondaryAction}
+              activeOpacity={0.85}
+            >
+              <View style={styles.secondaryIcon}>
+                <Text style={styles.secondaryIconText}>📊</Text>
+              </View>
+              <Text style={styles.secondaryTitle}>Test History</Text>
+              <Text style={styles.secondarySubtitle}>View records</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* Test Results */}
+        {/* Latest Test Result */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>最近測試結果</Text>
-          <Text style={styles.sectionSubtitle}>
-            {recentTest.date} · {recentTest.eye === 'right' ? '右眼' : '左眼'}
-          </Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Latest Test Result</Text>
+            <TouchableOpacity>
+              <Text style={styles.seeAll}>See All</Text>
+            </TouchableOpacity>
+          </View>
 
-          <View style={styles.resultsGrid}>
-            <View style={styles.resultCard}>
-              <Text style={styles.resultLabel}>屈光度</Text>
-              <Text style={styles.resultValue}>
-                {recentTest.spherical.toFixed(2)}
-              </Text>
-              <Text style={styles.resultUnit}>D</Text>
-            </View>
-            <View style={styles.resultCard}>
-              <Text style={styles.resultLabel}>視力</Text>
-              <Text style={styles.resultValue}>
-                {recentTest.visualAcuity}
-              </Text>
-              <Text style={styles.resultUnit}>
-                {recentTest.logMAR.toFixed(2)} logMAR
-              </Text>
-            </View>
-            <View style={styles.resultCard}>
-              <Text style={styles.resultLabel}>品質分數</Text>
-              <Text style={[
-                styles.resultValue,
-                { color: getQualityColor(recentTest.grade) }
+          <View style={styles.testResultCard}>
+            <View style={styles.testHeader}>
+              <View>
+                <Text style={styles.testDate}>{recentTest.date}</Text>
+                <Text style={styles.testEye}>{recentTest.eye}</Text>
+              </View>
+              <View style={[
+                styles.qualityBadge,
+                { backgroundColor: getQualityColor(recentTest.grade) }
               ]}>
-                {recentTest.quality}
-              </Text>
-              <Text style={styles.resultUnit}>{recentTest.grade}</Text>
+                <Text style={styles.qualityText}>{recentTest.quality}</Text>
+              </View>
             </View>
-          </View>
 
-          {/* Technical Details */}
-          <View style={styles.technicalCard}>
-            <Text style={styles.technicalTitle}>📊 測量詳情</Text>
-            <View style={styles.technicalRow}>
-              <Text style={styles.technicalLabel}>LCA 校正</Text>
-              <Text style={styles.technicalValue}>✓ 已套用 (0.70D)</Text>
+            <View style={styles.metricsRow}>
+              <View style={styles.metric}>
+                <Text style={styles.metricLabel}>Refraction</Text>
+                <Text style={styles.metricValue}>
+                  {recentTest.spherical.toFixed(2)}
+                </Text>
+                <Text style={styles.metricUnit}>D</Text>
+              </View>
+              
+              <View style={styles.metricDivider} />
+              
+              <View style={styles.metric}>
+                <Text style={styles.metricLabel}>Visual Acuity</Text>
+                <Text style={styles.metricValue}>
+                  {recentTest.visualAcuity}
+                </Text>
+                <Text style={styles.metricUnit}>
+                  {recentTest.logMAR.toFixed(2)} logMAR
+                </Text>
+              </View>
             </View>
-            <View style={styles.technicalRow}>
-              <Text style={styles.technicalLabel}>DoF 校正</Text>
-              <Text style={styles.technicalValue}>✓ 線性模型</Text>
-            </View>
-            <View style={styles.technicalRow}>
-              <Text style={styles.technicalLabel}>測量次數</Text>
-              <Text style={styles.technicalValue}>3 次</Text>
-            </View>
-            <View style={styles.technicalRow}>
-              <Text style={styles.technicalLabel}>重測穩定度</Text>
-              <Text style={styles.technicalValue}>±0.24 D (95% CI)</Text>
+
+            <View style={styles.testFooter}>
+              <View style={styles.footerRow}>
+                <Text style={styles.footerLabel}>Quality Grade:</Text>
+                <Text style={[
+                  styles.footerValue,
+                  { color: getQualityColor(recentTest.grade) }
+                ]}>
+                  {recentTest.grade}
+                </Text>
+              </View>
+              <View style={styles.footerRow}>
+                <Text style={styles.footerLabel}>Corrections:</Text>
+                <Text style={styles.footerValue}>LCA + DoF</Text>
+              </View>
             </View>
           </View>
         </View>
 
-        {/* System Features */}
+        {/* Core Technologies */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>核心技術模組</Text>
-          <Text style={styles.sectionSubtitle}>五大專業子系統</Text>
+          <Text style={styles.sectionTitle}>Core Technologies</Text>
+          <Text style={styles.sectionSubtitle}>
+            Advanced optical and computational methods
+          </Text>
 
           <View style={styles.featuresGrid}>
-            <View style={styles.featureCard}>
-              <Text style={styles.featureIcon}>📏</Text>
-              <Text style={styles.featureTitle}>距離估測</Text>
-              <Text style={styles.featureFormula}>d = k / s</Text>
+            {features.map((feature, index) => (
+              <TouchableOpacity
+                key={index}
+                style={[styles.featureCard, { borderLeftColor: feature.color }]}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.featureIcon}>{feature.icon}</Text>
+                <Text style={styles.featureTitle}>{feature.title}</Text>
+                <Text style={styles.featureSubtitle}>{feature.subtitle}</Text>
+                <View style={styles.formulaBadge}>
+                  <Text style={styles.formulaText}>{feature.formula}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Technical Specifications */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Technical Specifications</Text>
+          
+          <View style={styles.specsCard}>
+            <View style={styles.specRow}>
+              <View style={styles.specLeft}>
+                <Text style={styles.specIcon}>📐</Text>
+                <Text style={styles.specLabel}>Measurement Range</Text>
+              </View>
+              <Text style={styles.specValue}>-10D to +5D</Text>
             </View>
-            <View style={styles.featureCard}>
-              <Text style={styles.featureIcon}>🎯</Text>
-              <Text style={styles.featureTitle}>視標控制</Text>
-              <Text style={styles.featureFormula}>H(t) = α₀·d(t)</Text>
+            
+            <View style={styles.specDivider} />
+            
+            <View style={styles.specRow}>
+              <View style={styles.specLeft}>
+                <Text style={styles.specIcon}>🎯</Text>
+                <Text style={styles.specLabel}>Optotype Type</Text>
+              </View>
+              <Text style={styles.specValue}>Landolt C</Text>
             </View>
-            <View style={styles.featureCard}>
-              <Text style={styles.featureIcon}>👁️</Text>
-              <Text style={styles.featureTitle}>視力測試</Text>
-              <Text style={styles.featureFormula}>Staircase</Text>
+            
+            <View style={styles.specDivider} />
+            
+            <View style={styles.specRow}>
+              <View style={styles.specLeft}>
+                <Text style={styles.specIcon}>📊</Text>
+                <Text style={styles.specLabel}>Test Method</Text>
+              </View>
+              <Text style={styles.specValue}>Adaptive Staircase</Text>
             </View>
-            <View style={styles.featureCard}>
-              <Text style={styles.featureIcon}>🔬</Text>
-              <Text style={styles.featureTitle}>屈光轉換</Text>
-              <Text style={styles.featureFormula}>v = -1/d</Text>
+            
+            <View style={styles.specDivider} />
+            
+            <View style={styles.specRow}>
+              <View style={styles.specLeft}>
+                <Text style={styles.specIcon}>🔬</Text>
+                <Text style={styles.specLabel}>Corrections</Text>
+              </View>
+              <Text style={styles.specValue}>LCA + DoF</Text>
+            </View>
+            
+            <View style={styles.specDivider} />
+            
+            <View style={styles.specRow}>
+              <View style={styles.specLeft}>
+                <Text style={styles.specIcon}>✓</Text>
+                <Text style={styles.specLabel}>Quality Control</Text>
+              </View>
+              <Text style={styles.specValue}>0-100 Score</Text>
             </View>
           </View>
         </View>
 
-        {/* Helpful Tips */}
+        {/* Knowledge Base */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>知識中心</Text>
-
+          <Text style={styles.sectionTitle}>Knowledge Base</Text>
+          
           {articles.map((article) => (
             <TouchableOpacity
               key={article.id}
-              style={[styles.articleItem, { backgroundColor: article.color }]}
+              style={[styles.articleCard, { backgroundColor: article.color }]}
               onPress={() => navigation.navigate('Article', { article })}
-              activeOpacity={0.7}
+              activeOpacity={0.85}
             >
               <View style={styles.articleIconContainer}>
                 <Text style={styles.articleIcon}>{article.icon}</Text>
               </View>
+              
               <View style={styles.articleContent}>
-                <View style={styles.articleHeader}>
-                  <Text style={styles.articleAbstract}>{article.abstract}</Text>
+                <View style={styles.articleTop}>
+                  <Text style={styles.articleTitle}>{article.title}</Text>
                   <View style={styles.articleBadge}>
                     <Text style={styles.articleBadgeText}>{article.badge}</Text>
                   </View>
                 </View>
-                <Text style={styles.articleTitle}>{article.title}</Text>
                 <Text style={styles.articleDescription} numberOfLines={2}>
-                  {article.content}
+                  {article.description}
                 </Text>
               </View>
+              
               <Text style={styles.articleArrow}>›</Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* Technical Specs */}
+        {/* User Reviews */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>技術規格</Text>
-          
-          <View style={styles.specsCard}>
-            <View style={styles.specRow}>
-              <Text style={styles.specLabel}>測量範圍</Text>
-              <Text style={styles.specValue}>-10D ~ +5D</Text>
-            </View>
-            <View style={styles.specDivider} />
-            <View style={styles.specRow}>
-              <Text style={styles.specLabel}>視標類型</Text>
-              <Text style={styles.specValue}>Landolt C</Text>
-            </View>
-            <View style={styles.specDivider} />
-            <View style={styles.specRow}>
-              <Text style={styles.specLabel}>測試方法</Text>
-              <Text style={styles.specValue}>Staircase 自適應</Text>
-            </View>
-            <View style={styles.specDivider} />
-            <View style={styles.specRow}>
-              <Text style={styles.specLabel}>校正方式</Text>
-              <Text style={styles.specValue}>LCA + DoF</Text>
-            </View>
-            <View style={styles.specDivider} />
-            <View style={styles.specRow}>
-              <Text style={styles.specLabel}>品質控制</Text>
-              <Text style={styles.specValue}>0-100 分評分</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* User Feedback */}
-        <View style={styles.section}>
-          <View style={styles.feedbackHeader}>
+          <View style={styles.sectionHeader}>
             <View>
-              <Text style={styles.sectionTitle}>用戶評價</Text>
-              <Text style={styles.sectionSubtitle}>來自真實用戶的反饋</Text>
+              <Text style={styles.sectionTitle}>User Reviews</Text>
+              <Text style={styles.sectionSubtitle}>
+                What our users say
+              </Text>
             </View>
             <TouchableOpacity
               style={styles.addButton}
@@ -335,23 +398,27 @@ export default function HomeScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.reviewsScroll}
+          >
             {feedbacks.map((feedback) => (
-              <View key={feedback.id} style={styles.feedbackCard}>
-                <View style={styles.feedbackTop}>
-                  <View style={styles.feedbackAvatarContainer}>
-                    <View style={styles.feedbackAvatar}>
-                      <Text style={styles.feedbackAvatarText}>
-                        {feedback.name.charAt(0)}
-                      </Text>
-                    </View>
-                    <Text style={styles.feedbackName}>{feedback.name}</Text>
+              <View key={feedback.id} style={styles.reviewCard}>
+                <View style={styles.reviewHeader}>
+                  <View style={styles.reviewAvatar}>
+                    <Text style={styles.reviewAvatarText}>
+                      {feedback.name.split(' ').map(n => n[0]).join('')}
+                    </Text>
                   </View>
-                  <Text style={styles.feedbackRating}>
-                    {renderStars(feedback.rating)}
-                  </Text>
+                  <View style={styles.reviewInfo}>
+                    <Text style={styles.reviewName}>{feedback.name}</Text>
+                    <Text style={styles.reviewRating}>
+                      {renderStars(feedback.rating)}
+                    </Text>
+                  </View>
                 </View>
-                <Text style={styles.feedbackComment}>{feedback.comment}</Text>
+                <Text style={styles.reviewComment}>{feedback.comment}</Text>
               </View>
             ))}
           </ScrollView>
@@ -360,10 +427,11 @@ export default function HomeScreen({ navigation }) {
         {/* Disclaimer */}
         <View style={styles.section}>
           <View style={styles.disclaimerCard}>
-            <Text style={styles.disclaimerTitle}>⚠️ 重要聲明</Text>
+            <Text style={styles.disclaimerIcon}>⚠️</Text>
+            <Text style={styles.disclaimerTitle}>Important Notice</Text>
             <Text style={styles.disclaimerText}>
-              本系統為研究和輔助工具，測量結果僅供參考。
-              實際配鏡前請諮詢合格的眼科醫師或驗光師。
+              This system is a research and assistive tool. Results are for reference only. 
+              Please consult a qualified optometrist before getting prescription glasses.
             </Text>
           </View>
         </View>
@@ -377,40 +445,39 @@ export default function HomeScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#fafafa',
   },
+  
+  // Header
   header: {
-    padding: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
-  userInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#f0f0f0',
-    marginRight: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
+  headerTitle: {
     fontSize: 24,
-  },
-  userName: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#000',
+    letterSpacing: -0.5,
   },
-  userId: {
-    fontSize: 12,
+  headerSubtitle: {
+    fontSize: 13,
     color: '#666',
     marginTop: 2,
   },
@@ -418,192 +485,282 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 12,
+    borderRadius: 20,
   },
   proText: {
     color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  
+  scrollContent: {
+    paddingBottom: 20,
+  },
+  
+  // Hero Section
+  heroSection: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  heroCard: {
+    backgroundColor: '#000',
+    borderRadius: 24,
+    padding: 28,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.2,
+        shadowRadius: 16,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
+  },
+  heroTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#fff',
+    marginBottom: 8,
+    letterSpacing: -0.5,
+  },
+  heroSubtitle: {
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.8)',
+    marginBottom: 20,
+    lineHeight: 22,
+  },
+  heroBadges: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  heroBadge: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  heroBadgeText: {
+    color: '#fff',
     fontSize: 12,
     fontWeight: '600',
-  },
-  
-  // Featured Banner
-  newsSection: {
-    backgroundColor: '#000',
-    padding: 24,
-    marginHorizontal: 20,
-    marginTop: 20,
-    marginBottom: 16,
-    borderRadius: 16,
-  },
-  bannerContent: {
-    marginBottom: 20,
-  },
-  bannerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#fff',
-    marginBottom: 8,
-  },
-  bannerSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.7)',
-    marginBottom: 16,
-  },
-  techBadges: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  techBadge: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  techBadgeText: {
-    color: '#fff',
-    fontSize: 12,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-  },
-  dotsContainer: {
-    flexDirection: 'row',
-    gap: 8,
-    justifyContent: 'center',
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-  },
-  activeDot: {
-    backgroundColor: '#fff',
-    width: 24,
-  },
-  
-  // Terms
-  termsButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    marginHorizontal: 20,
-    marginBottom: 20,
-    backgroundColor: '#fff3e0',
-    borderRadius: 8,
-  },
-  termsIcon: {
-    fontSize: 16,
-    marginRight: 8,
-  },
-  termsText: {
-    fontSize: 13,
-    color: '#f57c00',
-  },
-  
-  // Action Buttons
-  actionButtons: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    gap: 12,
-    marginBottom: 30,
-  },
-  button: {
-    flex: 1,
-    padding: 20,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  primaryButton: {
-    backgroundColor: '#000',
-  },
-  secondaryButton: {
-    backgroundColor: '#f5f5f5',
-  },
-  buttonIcon: {
-    fontSize: 32,
-    marginBottom: 8,
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  buttonSubtext: {
-    fontSize: 12,
-    opacity: 0.7,
   },
   
   // Section
   section: {
     paddingHorizontal: 20,
-    marginBottom: 32,
+    marginTop: 32,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 4,
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#000',
+    letterSpacing: -0.5,
   },
   sectionSubtitle: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#666',
-    marginBottom: 16,
+    marginTop: 4,
+    marginBottom: 12,
+  },
+  seeAll: {
+    fontSize: 15,
+    color: '#000',
+    fontWeight: '600',
   },
   
-  // Results Grid
-  resultsGrid: {
+  // Primary Action
+  primaryAction: {
+    backgroundColor: '#000',
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
+    marginBottom: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  actionIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  actionIconText: {
+    fontSize: 28,
+  },
+  actionContent: {
+    flex: 1,
+  },
+  actionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  actionSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+  },
+  actionArrow: {
+    fontSize: 28,
+    color: '#fff',
+    marginLeft: 12,
+  },
+  
+  // Secondary Actions
+  secondaryActions: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 16,
   },
-  resultCard: {
+  secondaryAction: {
     flex: 1,
-    backgroundColor: '#f9f9f9',
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#eee',
+    borderColor: '#f0f0f0',
   },
-  resultLabel: {
+  secondaryIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#f8f9fa',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  secondaryIconText: {
+    fontSize: 24,
+  },
+  secondaryTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#000',
+    marginBottom: 4,
+  },
+  secondarySubtitle: {
+    fontSize: 13,
+    color: '#666',
+  },
+  
+  // Test Result Card
+  testResultCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  testHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+  },
+  testDate: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  testEye: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#000',
+  },
+  qualityBadge: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+  qualityText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  metricsRow: {
+    flexDirection: 'row',
+    backgroundColor: '#f8f9fa',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+  },
+  metric: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  metricLabel: {
     fontSize: 12,
     color: '#666',
     marginBottom: 8,
   },
-  resultValue: {
+  metricValue: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#000',
     marginBottom: 4,
   },
-  resultUnit: {
+  metricUnit: {
     fontSize: 11,
     color: '#999',
   },
-  
-  // Technical Card
-  technicalCard: {
-    backgroundColor: '#f9f9f9',
-    padding: 16,
-    borderRadius: 12,
+  metricDivider: {
+    width: 1,
+    backgroundColor: '#e5e7eb',
+    marginHorizontal: 16,
   },
-  technicalTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 12,
+  testFooter: {
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+    gap: 8,
   },
-  technicalRow: {
+  footerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 8,
   },
-  technicalLabel: {
-    fontSize: 13,
+  footerLabel: {
+    fontSize: 14,
     color: '#666',
   },
-  technicalValue: {
-    fontSize: 13,
-    color: '#000',
+  footerValue: {
+    fontSize: 14,
     fontWeight: '600',
+    color: '#000',
   },
   
   // Features Grid
@@ -614,127 +771,142 @@ const styles = StyleSheet.create({
   },
   featureCard: {
     width: (SCREEN_WIDTH - 52) / 2,
-    backgroundColor: '#f9f9f9',
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+    borderLeftWidth: 4,
   },
   featureIcon: {
-    fontSize: 32,
-    marginBottom: 8,
+    fontSize: 36,
+    marginBottom: 12,
   },
   featureTitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '700',
-    marginBottom: 6,
+    color: '#000',
+    marginBottom: 4,
     textAlign: 'center',
   },
-  featureFormula: {
+  featureSubtitle: {
     fontSize: 12,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
     color: '#666',
-    backgroundColor: '#fff',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  formulaBadge: {
+    backgroundColor: '#f8f9fa',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  formulaText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#000',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
   
-  // Article Items
-  articleItem: {
+  // Specs Card
+  specsCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+  },
+  specRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+  },
+  specLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  specIcon: {
+    fontSize: 20,
+    marginRight: 12,
+  },
+  specLabel: {
+    fontSize: 15,
+    color: '#333',
+  },
+  specValue: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#000',
+  },
+  specDivider: {
+    height: 1,
+    backgroundColor: '#f0f0f0',
+  },
+  
+  // Article Cards
+  articleCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 16,
     padding: 16,
-    borderRadius: 12,
     marginBottom: 12,
   },
   articleIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 60,
+    height: 60,
+    borderRadius: 16,
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
   },
   articleIcon: {
-    fontSize: 24,
+    fontSize: 28,
   },
   articleContent: {
     flex: 1,
+    marginLeft: 16,
   },
-  articleHeader: {
+  articleTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
   },
-  articleAbstract: {
-    fontSize: 12,
-    color: '#666',
+  articleTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#000',
     marginRight: 8,
   },
   articleBadge: {
     backgroundColor: '#000',
     paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   articleBadgeText: {
-    color: '#fff',
     fontSize: 10,
-    fontWeight: '600',
-  },
-  articleTitle: {
-    fontSize: 16,
     fontWeight: '700',
-    marginBottom: 4,
+    color: '#fff',
+    letterSpacing: 0.5,
   },
   articleDescription: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#666',
-    lineHeight: 18,
+    lineHeight: 20,
   },
   articleArrow: {
     fontSize: 28,
     color: '#ccc',
-    marginLeft: 8,
+    marginLeft: 12,
   },
   
-  // Specs Card
-  specsCard: {
-    backgroundColor: '#f9f9f9',
-    borderRadius: 12,
-    padding: 16,
-  },
-  specRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
-  },
-  specLabel: {
-    fontSize: 14,
-    color: '#666',
-  },
-  specValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000',
-  },
-  specDivider: {
-    height: 1,
-    backgroundColor: '#eee',
-  },
-  
-  // Feedback
-  feedbackHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-  },
+  // Reviews
   addButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#000',
     alignItems: 'center',
     justifyContent: 'center',
@@ -744,43 +916,50 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '300',
   },
-  feedbackCard: {
-    width: 280,
-    backgroundColor: '#f9f9f9',
-    padding: 16,
-    borderRadius: 12,
+  reviewsScroll: {
+    paddingRight: 20,
+  },
+  reviewCard: {
+    width: 300,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
     marginRight: 12,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
   },
-  feedbackTop: {
-    marginBottom: 12,
-  },
-  feedbackAvatarContainer: {
+  reviewHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 16,
   },
-  feedbackAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  reviewAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#000',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    marginRight: 12,
   },
-  feedbackAvatarText: {
+  reviewAvatarText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '700',
   },
-  feedbackName: {
-    fontSize: 16,
-    fontWeight: '600',
+  reviewInfo: {
+    flex: 1,
   },
-  feedbackRating: {
+  reviewName: {
     fontSize: 16,
+    fontWeight: '700',
+    color: '#000',
+    marginBottom: 2,
   },
-  feedbackComment: {
+  reviewRating: {
+    fontSize: 14,
+  },
+  reviewComment: {
     fontSize: 14,
     color: '#333',
     lineHeight: 20,
@@ -788,18 +967,27 @@ const styles = StyleSheet.create({
   
   // Disclaimer
   disclaimerCard: {
-    backgroundColor: '#fff3e0',
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+    borderLeftWidth: 4,
+    borderLeftColor: '#f59e0b',
+  },
+  disclaimerIcon: {
+    fontSize: 24,
+    marginBottom: 8,
   },
   disclaimerTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
+    color: '#000',
     marginBottom: 8,
   },
   disclaimerText: {
     fontSize: 14,
     color: '#666',
-    lineHeight: 20,
+    lineHeight: 21,
   },
 });
