@@ -30,5 +30,10 @@
     "eas": {
       "projectId": "692a1e4b-e0cb-4036-a853-88aafb5a43b4"
     }
+  },
+  "expo": {
+    "android": {
+      "package": "com.yuyiolulu.eyesightapp"
+    }
   }
 }
