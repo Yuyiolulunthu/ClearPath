@@ -333,8 +333,11 @@ export default function VisionCareScreen({ navigation }) {
                 Cases outside standard range require professional attention.
                 System will automatically refer to mobile optometrist network.
               </Text>
-              <TouchableOpacity style={styles.referralButton}>
-                <Text style={styles.referralButtonText}>View Referral Network</Text>
+              <TouchableOpacity 
+                style={styles.referralButton}
+                onPress={() => navigation.navigate('RiskSafeguards')}
+              >
+                <Text style={styles.referralButtonText}>View Safety Protocols</Text>
               </TouchableOpacity>
             </View>
           </View>

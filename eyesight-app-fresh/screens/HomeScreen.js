@@ -79,6 +79,15 @@ export default function HomeScreen({ navigation }) {
   const articles = [
     {
       id: 1,
+      icon: '🛡️',
+      title: 'Risk & Safeguards',
+      description: 'Multi-layered safety system and screening protocols',
+      badge: 'Safety',
+      color: '#fee',
+      route: 'RiskSafeguards',
+    },
+    {
+      id: 2,
       icon: '📚',
       title: 'System Architecture',
       description: 'Learn about the five core modules and technical specifications',
@@ -86,7 +95,7 @@ export default function HomeScreen({ navigation }) {
       color: '#e3f2fd',
     },
     {
-      id: 2,
+      id: 3,
       icon: '🔬',
       title: 'Measurement Principles',
       description: 'Understanding optical models and refraction calculations',
@@ -94,7 +103,7 @@ export default function HomeScreen({ navigation }) {
       color: '#f3e5f5',
     },
     {
-      id: 3,
+      id: 4,
       icon: '💡',
       title: 'Best Practices',
       description: 'Tips for achieving the most accurate measurements',
@@ -353,7 +362,13 @@ export default function HomeScreen({ navigation }) {
             <TouchableOpacity
               key={article.id}
               style={[styles.articleCard, { backgroundColor: article.color }]}
-              onPress={() => navigation.navigate('Article', { article })}
+              onPress={() => {
+                if (article.route) {
+                  navigation.navigate(article.route);
+                } else {
+                  navigation.navigate('Article', { article });
+                }
+              }}
               activeOpacity={0.85}
             >
               <View style={styles.articleIconContainer}>

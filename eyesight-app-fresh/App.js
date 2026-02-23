@@ -7,6 +7,7 @@ import EyesightTestScreen from './screens/EyesightTestScreen';
 import BuyGlassesScreen from './screens/BuyGlassesScreen';
 import ArticleScreen from './screens/ArticleScreen';
 import AddFeedbackScreen from './screens/AddFeedbackScreen';
+import RiskSafeguardsScreen from './screens/RiskSafeguardsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -49,6 +50,11 @@ export default function App() {
           name="AddFeedback" 
           component={AddFeedbackScreen}
           options={{ title: 'Add Feedback' }}
+        />
+        <Stack.Screen 
+          name="RiskSafeguards" 
+          component={RiskSafeguardsScreen}
+          options={{ title: 'Risk Safeguards' }}
         />
       </Stack.Navigator>
     </NavigationContainer>
