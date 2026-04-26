@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
+import { StatusBar } from 'expo-status-bar';
+import { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  SafeAreaView,
   Dimensions,
   Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -207,6 +207,10 @@ export default function HomeScreen({ navigation }) {
               </View>
               <Text style={styles.secondaryTitle}>Test History</Text>
               <Text style={styles.secondarySubtitle}>View records</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => navigation.navigate('CameraTest')}>
+              <Text>Camera Test (Dev)</Text>
             </TouchableOpacity>
           </View>
         </View>

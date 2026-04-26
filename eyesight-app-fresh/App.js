@@ -1,13 +1,15 @@
-import 'react-native-gesture-handler';
-import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import HomeScreen from './screens/HomeScreen';
-import EyesightTestScreen from './screens/EyesightTestScreen';
-import BuyGlassesScreen from './screens/BuyGlassesScreen';
-import ArticleScreen from './screens/ArticleScreen';
+import 'react-native-gesture-handler';
 import AddFeedbackScreen from './screens/AddFeedbackScreen';
+import ArticleScreen from './screens/ArticleScreen';
+import BuyGlassesScreen from './screens/BuyGlassesScreen';
+import CameraTestScreen from './screens/CameraTestScreen';
+import EyesightTestScreen from './screens/EyesightTestScreen';
+import HomeScreen from './screens/HomeScreen';
 import RiskSafeguardsScreen from './screens/RiskSafeguardsScreen';
+
+// inside Stack.Navigator
 
 const Stack = createNativeStackNavigator();
 
@@ -55,6 +57,11 @@ export default function App() {
           name="RiskSafeguards" 
           component={RiskSafeguardsScreen}
           options={{ title: 'Risk Safeguards' }}
+        />
+        <Stack.Screen
+          name="CameraTest"
+          component={CameraTestScreen}
+          options={{ headerShown: false }}
         />
       </Stack.Navigator>
     </NavigationContainer>
