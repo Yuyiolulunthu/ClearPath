@@ -1,0 +1,26 @@
+{
+  "recordId": "rec-babb9ec198d6",
+  "eye": "right",
+  "ppi": 440,
+  "finalResults": {
+    "appRx": -3.788508920658276,
+    "sphericalRaw": -3.788508920658276,
+    "spherical": -3.788508920658276,
+    "vergenceMean": -3.788508920658276,
+    "vergenceStd": 0.037744318324165735,
+    "measurementCount": 3,
+    "eye": "right",
+    "qualityScore": 75,
+    "qualityGrade": "GOOD",
+    "crossModalityFlag": "none",
+    "vaLowConfidence": false
+  },
+  "visualAcuity": {
+    "logMAR": 0.2227551147221032,
+    "lowConfidence": false
+  },
+  "qualityScore": 80,
+  "qualityGrade": "GOOD",
+  "crossModalityFlag": "none",
+  "vaLowConfidence": false
+}
