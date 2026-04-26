@@ -1,29 +1,21 @@
 // 視力測試模組 - 3-down-1-up Adaptive Staircase
 //
-// Threshold definition:
-//   - Converges on the level where P(correct)^3 = 1 - P(correct)
-//   - That gives P ≈ 0.794 (79.4% correct)
-//   - Aligned with ISO 10342 / standard clinical optometry
-//   - For 4-AFC tasks (Landolt C with 4 directions), 79.4% correct
-//     corresponds to ~50% actually-seen after subtracting the 25% guess rate
-//
-// Why not 1-down-1-up (the previous version):
-//   - 1d1u converges on 50% correct
-//   - For 4-AFC that's only ~33% above the 25% guess floor — a chance-biased
-//     estimate that systematically OVER-estimates acuity by ~0.15-0.20 decimal.
-//   - Wrong direction for screening: false negatives are worse than false
-//     positives (missing a vision problem is worse than flagging a healthy eye).
+// v1.1: when termination occurs before enough reversals to compute a
+// reversal-mean threshold, fall back to the staircase's last operating
+// level (currentLogMAR) and flag the result as low-confidence. This
+// prevents downstream code from receiving a null threshold and crashing
+// on .toFixed() etc, while still surfacing the uncertainty.
 
 export class StaircaseProtocol {
   constructor(config = {}) {
-    this.startLogMAR     = config.startLogMAR     ?? 0.3;   // 20/40
-    this.minLogMAR       = config.minLogMAR       ?? -0.3;  // 20/10
-    this.maxLogMAR       = config.maxLogMAR       ?? 1.0;   // 20/200
+    this.startLogMAR     = config.startLogMAR     ?? 0.3;
+    this.minLogMAR       = config.minLogMAR       ?? -0.3;
+    this.maxLogMAR       = config.maxLogMAR       ?? 1.0;
     this.stepSize        = config.stepSize        ?? 0.1;
-    this.reversalsNeeded = config.reversalsNeeded ?? 6;     // 3d1u needs more reversals than 1d1u
-    this.maxTrials       = config.maxTrials       ?? 40;    // bumped to accommodate longer convergence
-    this.thresholdReversals = config.thresholdReversals ?? 4; // last N reversals averaged for threshold
-    this.consecutiveCorrectNeeded = 3;                      // 3-down
+    this.reversalsNeeded = config.reversalsNeeded ?? 6;
+    this.maxTrials       = config.maxTrials       ?? 40;
+    this.thresholdReversals = config.thresholdReversals ?? 4;
+    this.consecutiveCorrectNeeded = 3;
 
     this._reset();
   }
@@ -34,23 +26,14 @@ export class StaircaseProtocol {
     this.reversals         = [];
     this.trialCount        = 0;
     this.lastDirection     = null;
-    this.consecutiveCorrect = 0;   // counter for the 3-down rule
+    this.consecutiveCorrect = 0;
   }
 
   reset() {
     this._reset();
   }
 
-  /**
-   * Record a response. The 3-down-1-up rule:
-   *   - 3 consecutive correct → step harder (smaller logMAR)
-   *   - 1 incorrect → step easier (larger logMAR), reset the correct counter
-   *
-   * @param {boolean} correct
-   * @returns {Object} { continue, currentLogMAR, threshold, reversalCount, trialCount }
-   */
   recordResponse(correct) {
-    // Log this trial against the level it was actually presented at.
     this.responses.push({
       logMAR: this.currentLogMAR,
       correct,
@@ -58,22 +41,19 @@ export class StaircaseProtocol {
     });
     this.trialCount++;
 
-    let newDirection = null;          // 'harder' | 'easier' | null (no step this trial)
+    let newDirection = null;
 
     if (correct) {
       this.consecutiveCorrect++;
       if (this.consecutiveCorrect >= this.consecutiveCorrectNeeded) {
-        // Step harder
         newDirection = 'harder';
         this.currentLogMAR = Math.max(
           this.minLogMAR,
           this.currentLogMAR - this.stepSize
         );
-        this.consecutiveCorrect = 0; // reset after a step
+        this.consecutiveCorrect = 0;
       }
-      // else: stay at the same level, await next response
     } else {
-      // 1-up: any error steps easier immediately
       newDirection = 'easier';
       this.currentLogMAR = Math.min(
         this.maxLogMAR,
@@ -82,13 +62,9 @@ export class StaircaseProtocol {
       this.consecutiveCorrect = 0;
     }
 
-    // Reversal: only when we actually stepped this trial AND the direction
-    // flipped from last step.
     if (newDirection && this.lastDirection && newDirection !== this.lastDirection) {
       this.reversals.push({
         trial:  this.trialCount - 1,
-        // The reversal logMAR is the level the user was tested at when the
-        // flip happened.
         logMAR: this.responses[this.responses.length - 1].logMAR,
         direction: newDirection,
       });
@@ -98,26 +74,36 @@ export class StaircaseProtocol {
       this.lastDirection = newDirection;
     }
 
-    // Termination: enough reversals OR trial cap reached
     const shouldContinue =
       this.reversals.length < this.reversalsNeeded &&
       this.trialCount       < this.maxTrials;
 
-    // Threshold estimate: mean of the last N reversals (default 4).
-    // Convention in psychophysics: discard the first 1-2 reversals (often
-    // noisy "warm-up" reversals before the staircase has settled). We keep
-    // it simple: just average the most recent thresholdReversals.
+    // Threshold estimation with fallbacks:
+    //   - Preferred: mean of last N reversals (needs ≥ 2 reversals)
+    //   - Fallback (when terminating): use currentLogMAR + low-confidence flag
+    //   - Otherwise: null while staircase is mid-run (don't render yet)
     let threshold = null;
+    let lowConfidence = false;
+
     if (this.reversals.length >= 2) {
       const recent = this.reversals.slice(-this.thresholdReversals);
       const sum = recent.reduce((a, r) => a + r.logMAR, 0);
       threshold = sum / recent.length;
+      // If we have <4 reversals, that's still a valid mean but somewhat
+      // shaky — caller can decide to flag it.
+      lowConfidence = this.reversals.length < this.thresholdReversals;
+    } else if (!shouldContinue) {
+      // We're done but never got enough reversals — fall back to wherever
+      // the staircase ended up. Better than null, with a clear quality flag.
+      threshold = this.currentLogMAR;
+      lowConfidence = true;
     }
 
     return {
       continue:      shouldContinue,
       currentLogMAR: this.currentLogMAR,
       threshold,
+      lowConfidence,
       reversalCount: this.reversals.length,
       trialCount:    this.trialCount,
       consecutiveCorrect: this.consecutiveCorrect,
@@ -135,20 +121,11 @@ export class StaircaseProtocol {
   }
 }
 
-// ---------- Helpers (unchanged) ----------
-
-/**
- * Generate a random Landolt C direction.
- */
 export function generateDirection() {
   const directions = ['up', 'down', 'left', 'right'];
   return directions[Math.floor(Math.random() * directions.length)];
 }
 
-/**
- * CSS rotation (degrees) for a given gap direction.
- * Base C orientation: gap to the right (0°).
- */
 export function getRotationAngle(direction) {
   const rotations = {
     right: 0,

@@ -1,21 +1,21 @@
 /**
- * EyesightTestScreen v2.3
+ * EyesightTestScreen v2.6
  * --------------------------------------------------------------------------
- * Changes from v2.2:
+ * Changes from v2.5:
  *
- *   1. Far-point stimulus is now a BRIGHT BLUE Landolt C on a BLACK
- *      background (Feasibility doc §6.2). This activates the LCA shift
- *      (~0.7 D) that brings the far-point of mildly myopic eyes into the
- *      measurable 40-100 cm range. Black background avoids spectral
- *      contamination from white/grey UI behind the stimulus.
+ *   Cross-modality consistency check (Feasibility doc §7.4):
  *
- *   2. Capture button is always tappable. If σ_d or sample-count gate
- *      fails, an alert shows the actual numbers so the user understands
- *      what's wrong (instead of seeing a dead button with no explanation).
+ *   Case A — Vision OK but refraction abnormal
+ *     logMAR < 0.10 AND |spherical| > 1.0 D
+ *     → Hard reject. The far-point measurement is suspect. User redoes
+ *       far-point only; VA threshold (30+ trial staircase) is preserved.
  *
- *   3. LandoltC component takes a `gapColor` prop so the small "gap" view
- *      can match the surrounding background (white-on-white for VA test,
- *      black-on-black for far-point).
+ *   Case B — Vision poor but refraction normal
+ *     logMAR > 0.30 AND |spherical| < 0.5 D
+ *     → Soft flag. Result is released but with a HIGH-severity quality
+ *       issue and a referral recommendation. Likely non-refractive cause
+ *       (amblyopia, cataract, etc) — beyond what a refraction screener
+ *       can resolve.
  * --------------------------------------------------------------------------
  */
 
@@ -35,6 +35,7 @@ import CameraView from '../components/CameraView';
 import { DataRecorder } from '../utils/DataRecorder';
 import { FarPointController } from '../utils/FarPointController';
 import { OptotypeController } from '../utils/OptotypeController';
+import { detectPPI } from '../utils/ppiDetector';
 import { QualityController } from '../utils/QualityController';
 import { RefractionCalculator } from '../utils/RefractionCalculator';
 import {
@@ -45,26 +46,77 @@ import {
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-// Tunables
+// ---------- Tunables ----------
 const CALIBRATION_DISTANCE_CM = 40;
-const SETUP_OK_HEAD_ANGLE     = 10;
-const SETUP_STABLE_MS         = 1500;
-const CALIBRATION_COUNTDOWN_MS = 3000;
-const TEST_DISTANCE_TOLERANCE_CM = 7;
-const FARPOINT_DISTANCE_MIN_CM   = 15;
-const FARPOINT_DISTANCE_MAX_CM   = 90;
-const TEST_HEAD_ANGLE_LIMIT      = 15;
-const TEST_BAD_POSE_PAUSE_MS     = 1000;
-const TEST_GOOD_POSE_RESUME_MS   = 800;
-const READY_EYE_STABLE_MS        = 1000;
-const DEFAULT_PPI                = 401;
-const FARPOINT_LOGMAR_OFFSET     = 0.2;
+const SETUP_OK_HEAD_ANGLE_YAW_ROLL = 10;
+const SETUP_OK_PITCH               = 15;
+const SETUP_STABLE_MS              = 1500;
+const CALIBRATION_COUNTDOWN_MS     = 3000;
+const TEST_DISTANCE_TOLERANCE_CM   = 7;
+const FARPOINT_DISTANCE_MIN_CM     = 15;
+const FARPOINT_DISTANCE_MAX_CM     = 90;
+const TEST_HEAD_ANGLE_LIMIT        = 15;
+const TEST_PITCH_LIMIT             = 20;
+const TEST_BAD_POSE_PAUSE_MS       = 1000;
+const TEST_GOOD_POSE_RESUME_MS     = 800;
+const READY_EYE_STABLE_MS          = 1000;
+const FARPOINT_LOGMAR_OFFSET       = 0.2;
+const VERGENCE_STD_HARD_GATE_D     = 0.20;
 
-// Far-point stimulus colors
-const FARPOINT_BG       = '#000';        // black avoids spectral contamination
-const FARPOINT_BLUE     = '#0066FF';     // bright blue, near-470nm peak on sRGB
+// §7.4 cross-modality thresholds
+const CROSS_CASE_A_LOGMAR_MAX = 0.10;   // good vision = ≥20/25
+const CROSS_CASE_A_SE_MIN_ABS = 1.0;    // notable refraction
+const CROSS_CASE_B_LOGMAR_MIN = 0.30;   // poor vision = ≤20/40
+const CROSS_CASE_B_SE_MAX_ABS = 0.5;    // refraction near zero
 
-// ---------- Landolt C ---------------------------------------------------------
+const FARPOINT_BG    = '#000';
+const FARPOINT_BLUE  = '#0066FF';
+
+// ---------- Cross-modality consistency (§7.4) ----------
+
+function checkCrossModalityConsistency(logMAR, spherical) {
+  if (!Number.isFinite(logMAR) || !Number.isFinite(spherical)) {
+    return { type: 'none' };
+  }
+  const absSE = Math.abs(spherical);
+
+  // Case A — vision good but refraction abnormal → suspect far-point
+  if (logMAR < CROSS_CASE_A_LOGMAR_MAX && absSE > CROSS_CASE_A_SE_MIN_ABS) {
+    return {
+      type: 'A',
+      action: 'hardReject',
+      logMAR, spherical,
+      message:
+        `Visual acuity is good (${snellenString(logMAR)}, logMAR ${logMAR.toFixed(2)}) but ` +
+        `the refraction reading is ${spherical.toFixed(2)} D. ` +
+        `These don't agree — likely the far-point measurement didn't capture your ` +
+        `true far point. Please redo the far-point procedure.`,
+    };
+  }
+
+  // Case B — vision poor but refraction near zero → likely non-refractive cause
+  if (logMAR > CROSS_CASE_B_LOGMAR_MIN && absSE < CROSS_CASE_B_SE_MAX_ABS) {
+    return {
+      type: 'B',
+      action: 'flag',
+      logMAR, spherical,
+      message:
+        `Visual acuity (${snellenString(logMAR)}, logMAR ${logMAR.toFixed(2)}) is below normal ` +
+        `but no significant refractive error was detected (${spherical.toFixed(2)} D). ` +
+        `The reduced vision may have a non-refractive cause that this screening tool cannot ` +
+        `resolve. We recommend a full eye exam with an optometrist.`,
+    };
+  }
+
+  return { type: 'none' };
+}
+
+function snellenString(logMAR) {
+  const denom = Math.round(20 * Math.pow(10, logMAR));
+  return `20/${denom}`;
+}
+
+// ---------- Landolt C ----------
 
 const LandoltC = ({ size, gap, stroke, direction, color = '#000', gapColor = '#fff' }) => {
   const rotation = getRotationAngle(direction);
@@ -88,7 +140,7 @@ const LandoltC = ({ size, gap, stroke, direction, color = '#000', gapColor = '#f
   );
 };
 
-// ---------- Main component ----------------------------------------------------
+// ---------- Main component ----------
 
 export default function EyesightTestScreen({ navigation }) {
   const [phase, setPhase] = useState('intro');
@@ -101,6 +153,7 @@ export default function EyesightTestScreen({ navigation }) {
     isCalibrated: false,
     yaw:          0,
     roll:         0,
+    pitch:        0,
   });
 
   const cameraOnUpdate = useRef(null);
@@ -112,8 +165,9 @@ export default function EyesightTestScreen({ navigation }) {
         eyeState:     state.eyeState,
         quality:      state.quality,
         isCalibrated: state.isCalibrated,
-        yaw:          state.face?.yawAngle ?? 0,
-        roll:         state.face?.rollAngle ?? 0,
+        yaw:          state.face?.yawAngle   ?? 0,
+        roll:         state.face?.rollAngle  ?? 0,
+        pitch:        state.face?.pitchAngle ?? 0,
       });
     };
   }
@@ -127,6 +181,8 @@ export default function EyesightTestScreen({ navigation }) {
   const [farPointCount, setFarPointCount]   = useState(0);
   const [farPointStimulus, setFarPointStimulus] = useState(null);
   const [farPointBuffer, setFarPointBuffer] = useState({ ready: false, mean: null, std: null, sampleCount: 0 });
+  const [retestModal, setRetestModal]       = useState(null);
+  const [crossModalityModal, setCrossModalityModal] = useState(null);
 
   const [finalResults, setFinalResults]     = useState(null);
   const [qualityReport, setQualityReport]   = useState(null);
@@ -137,13 +193,21 @@ export default function EyesightTestScreen({ navigation }) {
   const [paused, setPaused]                     = useState(false);
   const [pauseReason, setPauseReason]           = useState('');
 
+  const ppiInfoRef = useRef(null);
+  if (!ppiInfoRef.current) {
+    ppiInfoRef.current = detectPPI();
+    console.log(
+      `[PPI] detected ${ppiInfoRef.current.ppi} via ${ppiInfoRef.current.source} (dpr=${ppiInfoRef.current.dpr})`
+    );
+  }
+
   const optotypeRef     = useRef(null);
   const staircaseRef    = useRef(null);
   const refractionRef   = useRef(null);
   const qualityRef      = useRef(null);
   const recorderRef     = useRef(null);
   const farPointCtrlRef = useRef(null);
-  if (!optotypeRef.current)     optotypeRef.current     = new OptotypeController(DEFAULT_PPI);
+  if (!optotypeRef.current)     optotypeRef.current     = new OptotypeController(ppiInfoRef.current.ppi);
   if (!staircaseRef.current)    staircaseRef.current    = new StaircaseProtocol();
   if (!refractionRef.current)   refractionRef.current   = new RefractionCalculator();
   if (!qualityRef.current)      qualityRef.current      = new QualityController();
@@ -164,7 +228,10 @@ export default function EyesightTestScreen({ navigation }) {
       return;
     }
     const faceDetected = cam.quality !== 'searching';
-    const headOK = Math.abs(cam.yaw) < SETUP_OK_HEAD_ANGLE && Math.abs(cam.roll) < SETUP_OK_HEAD_ANGLE;
+    const headOK =
+      Math.abs(cam.yaw)   < SETUP_OK_HEAD_ANGLE_YAW_ROLL &&
+      Math.abs(cam.roll)  < SETUP_OK_HEAD_ANGLE_YAW_ROLL &&
+      Math.abs(cam.pitch) < SETUP_OK_PITCH;
     if (faceDetected && headOK) {
       if (setupStableSince === null) {
         setSetupStableSince(Date.now());
@@ -207,7 +274,9 @@ export default function EyesightTestScreen({ navigation }) {
   const handleCameraCalibrate = useCallback((info) => {
     if (phase === 'calibrating') {
       const r = recorderRef.current.createTestRecord('unknown', {
-        ppi: DEFAULT_PPI,
+        ppi: ppiInfoRef.current.ppi,
+        ppiSource: ppiInfoRef.current.source,
+        ppiDpr: ppiInfoRef.current.dpr,
         calibrationDistance: CALIBRATION_DISTANCE_CM,
         useBlueLight: true,
         mode: 'auto-camera',
@@ -265,7 +334,7 @@ export default function EyesightTestScreen({ navigation }) {
     if (phase === 'visualAcuity') updateOptotypeSize();
   }, [cam.distance, phase]);
 
-  // ----- farPoint sample push + dynamic stimulus size -----
+  // ----- farPoint sample push + dynamic stimulus -----
   useEffect(() => {
     if (phase !== 'farPoint') return;
     if (cam.distance == null) return;
@@ -295,9 +364,7 @@ export default function EyesightTestScreen({ navigation }) {
       }
       return;
     }
-
     const reasons = [];
-
     if (phase === 'visualAcuity') {
       const distOK = cam.distance != null
         && Math.abs(cam.distance - CALIBRATION_DISTANCE_CM) <= TEST_DISTANCE_TOLERANCE_CM;
@@ -306,7 +373,7 @@ export default function EyesightTestScreen({ navigation }) {
           ? 'Face not detected'
           : `Distance ${cam.distance.toFixed(0)} cm — should be ~${CALIBRATION_DISTANCE_CM} cm`
       );
-    } else if (phase === 'farPoint') {
+    } else {
       const distOK = cam.distance != null
         && cam.distance >= FARPOINT_DISTANCE_MIN_CM
         && cam.distance <= FARPOINT_DISTANCE_MAX_CM;
@@ -316,21 +383,20 @@ export default function EyesightTestScreen({ navigation }) {
           : `Distance ${cam.distance.toFixed(0)} cm — out of range (${FARPOINT_DISTANCE_MIN_CM}-${FARPOINT_DISTANCE_MAX_CM} cm)`
       );
     }
+    const yawOK   = Math.abs(cam.yaw)   < TEST_HEAD_ANGLE_LIMIT;
+    const rollOK  = Math.abs(cam.roll)  < TEST_HEAD_ANGLE_LIMIT;
+    const pitchOK = Math.abs(cam.pitch) < TEST_PITCH_LIMIT;
+    if (!yawOK || !rollOK) reasons.push('Look straight at the screen');
+    else if (!pitchOK)     reasons.push('Tilt your phone — keep eye level');
 
-    const headOK = Math.abs(cam.yaw) < TEST_HEAD_ANGLE_LIMIT && Math.abs(cam.roll) < TEST_HEAD_ANGLE_LIMIT;
-    if (!headOK) reasons.push('Look straight at the screen');
-
-    if (phase === 'visualAcuity' || phase === 'farPoint') {
-      const eyeOK = cam.eyeState?.validState && cam.eyeState.activeEye === eye;
-      if (!eyeOK) {
-        reasons.push(phase === 'farPoint'
-          ? `Keep ${eye === 'right' ? 'left' : 'right'} eye covered`
-          : `Cover ${eye === 'right' ? 'left' : 'right'} eye, look with ${eye} eye`);
-      }
+    const eyeOK = cam.eyeState?.validState && cam.eyeState.activeEye === eye;
+    if (!eyeOK) {
+      reasons.push(phase === 'farPoint'
+        ? `Keep ${eye === 'right' ? 'left' : 'right'} eye covered`
+        : `Cover ${eye === 'right' ? 'left' : 'right'} eye, look with ${eye} eye`);
     }
 
     const allOK = reasons.length === 0;
-
     if (!allOK) {
       goodPoseSince.current = null;
       if (badPoseSince.current === null) {
@@ -416,7 +482,20 @@ export default function EyesightTestScreen({ navigation }) {
     const newCount = farPointCount + 1;
     setFarPointCount(newCount);
     if (newCount >= 3) {
-      calculateFinalResults(std);
+      // Gate 1 — §7.3 vergence stability
+      const refraction = refractionRef.current.calculateRefraction(true);
+      if (refraction.vergenceStd > VERGENCE_STD_HARD_GATE_D) {
+        setRetestModal({ vergenceStd: refraction.vergenceStd });
+        return;
+      }
+      // Gate 2 — §7.4 cross-modality consistency
+      const consistency = checkCrossModalityConsistency(vaThreshold, refraction.spherical);
+      if (consistency.action === 'hardReject') {
+        setCrossModalityModal({ ...consistency });
+        return;
+      }
+      // Pass-through (or soft-flag): finalize
+      finalizeResults(refraction, std, consistency);
     } else {
       setFarPointStimulus({
         direction: generateDirection(),
@@ -425,13 +504,35 @@ export default function EyesightTestScreen({ navigation }) {
     }
   };
 
-  const calculateFinalResults = (lastStd) => {
-    const refraction = refractionRef.current.calculateRefraction(true);
+  const handleRetestConfirm = () => {
+    refractionRef.current.reset();
+    farPointCtrlRef.current.reset();
+    setFarPointCount(0);
+    setFarPointStimulus({
+      direction: generateDirection(),
+      size: farPointStimulus?.size ?? 100,
+    });
+    setRetestModal(null);
+  };
+
+  // §7.4 Case A — redo far-point only; preserve VA threshold
+  const handleCrossModalityRedo = () => {
+    refractionRef.current.reset();
+    farPointCtrlRef.current.reset();
+    setFarPointCount(0);
+    setFarPointStimulus({
+      direction: generateDirection(),
+      size: farPointStimulus?.size ?? 100,
+    });
+    setCrossModalityModal(null);
+  };
+
+  const finalizeResults = (refraction, lastStd, consistency) => {
     const qualityData = {
       geometry: {
         distanceStd: lastStd ?? 0.5,
         yaw:   cam.yaw,
-        pitch: 0,
+        pitch: cam.pitch,
         roll:  cam.roll,
         confidence: cam.distanceConf ?? 0.8,
       },
@@ -441,6 +542,29 @@ export default function EyesightTestScreen({ navigation }) {
       measurementCount: refraction.measurementCount,
     };
     const quality = qualityRef.current.assessOverallQuality(qualityData);
+
+    // §7.4 Case B — soft flag with referral
+    if (consistency && consistency.action === 'flag') {
+      quality.issues = [
+        ...(Array.isArray(quality.issues) ? quality.issues : []),
+        {
+          severity: 'HIGH',
+          message: consistency.message,
+          source: 'cross-modality',
+        },
+      ];
+      // Lower the score to reflect the flag (cap at 70 to indicate concern)
+      if (typeof quality.score === 'number' && quality.score > 70) {
+        quality.score = 70;
+        if (quality.grade === 'EXCELLENT' || quality.grade === 'GOOD') {
+          quality.grade = 'FAIR';
+        }
+      }
+      quality.recommendation =
+        (quality.recommendation ? quality.recommendation + ' ' : '') +
+        'Schedule a full eye exam — the reduced acuity is unlikely to be explained by refractive error alone.';
+    }
+
     try {
       recorderRef.current.recordQualityMetrics?.(recordIdRef.current, quality);
       recorderRef.current.recordFinalResults?.(recordIdRef.current, {
@@ -448,6 +572,9 @@ export default function EyesightTestScreen({ navigation }) {
         qualityScore: quality.score,
         qualityGrade: quality.grade,
         eye,
+        ppi: ppiInfoRef.current.ppi,
+        ppiSource: ppiInfoRef.current.source,
+        crossModalityFlag: consistency?.type ?? 'none',
         lcaCorrected: true,
         dofCorrected: true,
       });
@@ -499,18 +626,22 @@ export default function EyesightTestScreen({ navigation }) {
           <StatusItem
             label="POSTURE"
             value={
-              Math.abs(cam.yaw) < TEST_HEAD_ANGLE_LIMIT && Math.abs(cam.roll) < TEST_HEAD_ANGLE_LIMIT
+              Math.abs(cam.yaw)   < TEST_HEAD_ANGLE_LIMIT &&
+              Math.abs(cam.roll)  < TEST_HEAD_ANGLE_LIMIT &&
+              Math.abs(cam.pitch) < TEST_PITCH_LIMIT
                 ? 'OK' : 'TILT'
             }
             color={
-              Math.abs(cam.yaw) < TEST_HEAD_ANGLE_LIMIT && Math.abs(cam.roll) < TEST_HEAD_ANGLE_LIMIT
+              Math.abs(cam.yaw)   < TEST_HEAD_ANGLE_LIMIT &&
+              Math.abs(cam.roll)  < TEST_HEAD_ANGLE_LIMIT &&
+              Math.abs(cam.pitch) < TEST_PITCH_LIMIT
                 ? '#10b981' : '#f59e0b'
             }
           />
         </View>
       )}
 
-      {phase === 'intro'         && <IntroPhase onBegin={() => setPhase('setup')} />}
+      {phase === 'intro'         && <IntroPhase ppiInfo={ppiInfoRef.current} onBegin={() => setPhase('setup')} />}
       {phase === 'setup'         && <SetupPhase cam={cam} stableSince={setupStableSince} />}
       {phase === 'calibrating'   && <CalibratingPhase countdown={calibCountdown} />}
       {phase === 'ready'         && <ReadyPhase cam={cam} eyeStableSince={readyEyeStableSince} />}
@@ -538,6 +669,7 @@ export default function EyesightTestScreen({ navigation }) {
           finalResults={finalResults}
           qualityReport={qualityReport}
           vaThreshold={vaThreshold}
+          ppiInfo={ppiInfoRef.current}
           optotypeController={optotypeRef.current}
           dataRecorder={recorderRef.current}
           recordId={recordIdRef.current}
@@ -555,6 +687,47 @@ export default function EyesightTestScreen({ navigation }) {
           </View>
         </View>
       )}
+
+      {/* §7.3 vergence-std retest */}
+      {retestModal && (
+        <View style={styles.retestOverlay}>
+          <View style={styles.retestCard}>
+            <Text style={styles.retestIcon}>↻</Text>
+            <Text style={styles.retestTitle}>Measurements inconsistent</Text>
+            <Text style={styles.retestReason}>
+              The 3 far-point captures disagree by σ = {retestModal.vergenceStd.toFixed(2)} D
+              (must be ≤ {VERGENCE_STD_HARD_GATE_D.toFixed(2)} D, ISO 10342).
+            </Text>
+            <Text style={styles.retestHint}>
+              We won't release a result that's likely unreliable. Please redo the
+              far-point procedure: hold steady, capture the moment blur appears.
+            </Text>
+            <TouchableOpacity style={styles.retestButton} onPress={handleRetestConfirm}>
+              <Text style={styles.retestButtonText}>Redo Far-Point</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* §7.4 Case A cross-modality hard reject */}
+      {crossModalityModal && (
+        <View style={styles.retestOverlay}>
+          <View style={styles.retestCard}>
+            <Text style={styles.retestIcon}>⚠</Text>
+            <Text style={styles.retestTitle}>Inconsistent results</Text>
+            <Text style={styles.retestReason}>
+              {crossModalityModal.message}
+            </Text>
+            <Text style={styles.retestHint}>
+              Your acuity test result is preserved. Only the far-point measurement
+              will be redone.
+            </Text>
+            <TouchableOpacity style={styles.retestButton} onPress={handleCrossModalityRedo}>
+              <Text style={styles.retestButtonText}>Redo Far-Point</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -563,7 +736,7 @@ export default function EyesightTestScreen({ navigation }) {
 // PHASE COMPONENTS
 // ============================================================================
 
-function IntroPhase({ onBegin }) {
+function IntroPhase({ ppiInfo, onBegin }) {
   return (
     <ScrollView contentContainerStyle={styles.scrollContent} style={styles.introContainer}>
       <View style={styles.introHeader}>
@@ -587,6 +760,13 @@ function IntroPhase({ onBegin }) {
             </View>
           ))}
         </View>
+        {ppiInfo && (
+          <View style={styles.ppiInfoCard}>
+            <Text style={styles.ppiInfoText}>
+              Display: {ppiInfo.ppi} PPI · DPR {ppiInfo.dpr} · src: {ppiInfo.source}
+            </Text>
+          </View>
+        )}
         <View style={styles.warningCard}>
           <Text style={styles.warningTitle}>⚠ Research tool</Text>
           <Text style={styles.warningText}>
@@ -604,7 +784,10 @@ function IntroPhase({ onBegin }) {
 
 function SetupPhase({ cam, stableSince }) {
   const faceDetected = cam.quality !== 'searching';
-  const headOK = Math.abs(cam.yaw) < SETUP_OK_HEAD_ANGLE && Math.abs(cam.roll) < SETUP_OK_HEAD_ANGLE;
+  const headOK =
+    Math.abs(cam.yaw)   < SETUP_OK_HEAD_ANGLE_YAW_ROLL &&
+    Math.abs(cam.roll)  < SETUP_OK_HEAD_ANGLE_YAW_ROLL &&
+    Math.abs(cam.pitch) < SETUP_OK_PITCH;
   const allOK = faceDetected && headOK;
   let elapsed = 0;
   if (allOK && stableSince != null) elapsed = Date.now() - stableSince;
@@ -616,7 +799,7 @@ function SetupPhase({ cam, stableSince }) {
         <Text style={styles.setupSubtitle}>Hold the phone ~40 cm away, look straight at the camera</Text>
         <View style={styles.checkList}>
           <CheckRow label="Face detected"  pass={faceDetected} />
-          <CheckRow label="Head straight"  pass={headOK} />
+          <CheckRow label="Head straight (yaw / roll / pitch)" pass={headOK} />
         </View>
         <View style={styles.progressRing}>
           <View style={[styles.progressRingFill, { width: `${progress * 100}%` }]} />
@@ -698,11 +881,7 @@ function VisualAcuityPhase({ progress, eye, optotypeSize, currentOptotype, onRes
       <Text style={styles.instruction}>Identify the gap direction</Text>
       <View style={styles.directionPad}>
         {['up', 'left', 'right', 'down'].map(dir => (
-          <TouchableOpacity
-            key={dir}
-            style={styles.directionButton}
-            onPress={() => onResponse(dir)}
-          >
+          <TouchableOpacity key={dir} style={styles.directionButton} onPress={() => onResponse(dir)}>
             <Text style={styles.directionIcon}>
               {dir === 'up' ? '↑' : dir === 'down' ? '↓' : dir === 'left' ? '←' : '→'}
             </Text>
@@ -716,7 +895,6 @@ function VisualAcuityPhase({ progress, eye, optotypeSize, currentOptotype, onRes
 function FarPointPhase({ count, distance, buffer, stimulus, onCapture }) {
   const stable = buffer.ready && buffer.std != null && buffer.std <= 2.5;
   const stdColor = !buffer.ready ? '#9ca3af' : (buffer.std <= 2.5 ? '#10b981' : '#f59e0b');
-
   return (
     <View style={styles.farPointContainer}>
       <Text style={styles.farPointTitle}>Refraction Measurement</Text>
@@ -724,8 +902,6 @@ function FarPointPhase({ count, distance, buffer, stimulus, onCapture }) {
         Start with the phone close (~15-20 cm). Slowly move it AWAY from your face.
         The instant the blue C below becomes blurry — stop and tap Capture.
       </Text>
-
-      {/* Black box, blue Landolt C — activates the LCA shift (~0.7 D) */}
       <View style={styles.farPointStimulusBoxBlue}>
         {stimulus?.size && (
           <LandoltC
@@ -738,7 +914,6 @@ function FarPointPhase({ count, distance, buffer, stimulus, onCapture }) {
           />
         )}
       </View>
-
       <View style={styles.farPointReadouts}>
         <View style={styles.farPointReadout}>
           <Text style={styles.farPointReadoutLabel}>Distance</Text>
@@ -753,7 +928,6 @@ function FarPointPhase({ count, distance, buffer, stimulus, onCapture }) {
           </Text>
         </View>
       </View>
-
       <View style={styles.farPointCounterBox}>
         <Text style={styles.farPointCounter}>Capture {count}/3</Text>
         <View style={styles.dots}>
@@ -762,8 +936,6 @@ function FarPointPhase({ count, distance, buffer, stimulus, onCapture }) {
           ))}
         </View>
       </View>
-
-      {/* Always tappable; failure shows specific numbers */}
       <TouchableOpacity
         style={[styles.captureButton, !stable && styles.captureButtonAmber]}
         onPress={onCapture}
@@ -774,7 +946,7 @@ function FarPointPhase({ count, distance, buffer, stimulus, onCapture }) {
   );
 }
 
-function ResultsPhase({ eye, finalResults, qualityReport, vaThreshold, optotypeController, dataRecorder, recordId, onDone }) {
+function ResultsPhase({ eye, finalResults, qualityReport, vaThreshold, ppiInfo, optotypeController, dataRecorder, recordId, onDone }) {
   const colorFor = (grade) => ({
     EXCELLENT: '#10b981', GOOD: '#84cc16', FAIR: '#f59e0b',
     POOR: '#ef4444', UNRELIABLE: '#dc2626',
@@ -820,6 +992,9 @@ function ResultsPhase({ eye, finalResults, qualityReport, vaThreshold, optotypeC
             <StatsItem label="Std. Deviation"  value={`${finalResults.vergenceStd.toFixed(2)} D`} />
             <StatsItem label="Repeatability"   value={`±${(finalResults.vergenceStd * 1.96).toFixed(2)} D`} />
             <StatsItem label="Measurements"    value={`${finalResults.measurementCount}`} />
+            {ppiInfo && (
+              <StatsItem label="Display PPI" value={`${ppiInfo.ppi} (${ppiInfo.source})`} />
+            )}
           </View>
         </View>
         {qualityReport.issues?.length > 0 && (
@@ -900,7 +1075,6 @@ const styles = StyleSheet.create({
   statusItem: { flex: 1, alignItems: 'center' },
   statusLabel: { color: '#9ca3af', fontSize: 9, fontWeight: '700', letterSpacing: 0.8, marginBottom: 2 },
   statusValue: { fontSize: 14, fontWeight: '800' },
-
   introContainer: { backgroundColor: '#000' },
   scrollContent: { paddingBottom: 40 },
   introHeader: { paddingHorizontal: 20, paddingTop: 60, paddingBottom: 40, alignItems: 'center', backgroundColor: '#000' },
@@ -914,12 +1088,13 @@ const styles = StyleSheet.create({
   bulletNum: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center', marginRight: 12, marginTop: 1 },
   bulletNumText: { color: '#fff', fontSize: 12, fontWeight: '700' },
   bulletText: { flex: 1, fontSize: 14, color: '#333', lineHeight: 21 },
+  ppiInfoCard: { backgroundColor: '#f8f9fa', borderRadius: 12, padding: 12, marginBottom: 16, alignItems: 'center' },
+  ppiInfoText: { fontSize: 12, color: '#666', fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace' }) },
   warningCard: { backgroundColor: '#fff', borderRadius: 20, padding: 20, marginBottom: 24, borderLeftWidth: 4, borderLeftColor: '#f59e0b' },
   warningTitle: { fontSize: 16, fontWeight: '800', color: '#000', marginBottom: 6 },
   warningText: { fontSize: 14, color: '#666', lineHeight: 20 },
   startButton: { backgroundColor: '#000', borderRadius: 16, padding: 20, alignItems: 'center' },
   startButtonText: { fontSize: 18, fontWeight: '700', color: '#fff' },
-
   setupContainer: { flex: 1, justifyContent: 'flex-end', paddingHorizontal: 16, paddingBottom: Platform.OS === 'ios' ? 40 : 24 },
   setupCard: { backgroundColor: 'rgba(0,0,0,0.92)', borderRadius: 20, padding: 24, alignItems: 'center' },
   setupTitle: { color: '#fff', fontSize: 22, fontWeight: '800', marginBottom: 8 },
@@ -928,20 +1103,18 @@ const styles = StyleSheet.create({
   checkRow: { flexDirection: 'row', alignItems: 'center' },
   checkBox: { width: 24, height: 24, borderRadius: 12, textAlign: 'center', lineHeight: 24, color: '#666', backgroundColor: '#1a1a1a', fontSize: 14, fontWeight: '800', marginRight: 12 },
   checkBoxPass: { color: '#fff', backgroundColor: '#10b981' },
-  checkLabel: { color: '#9ca3af', fontSize: 15 },
+  checkLabel: { color: '#9ca3af', fontSize: 15, flex: 1 },
   checkLabelPass: { color: '#fff' },
   progressRing: { width: '100%', height: 6, borderRadius: 3, backgroundColor: '#1a1a1a', overflow: 'hidden', marginBottom: 12 },
   progressRingFill: { height: '100%', backgroundColor: '#10b981' },
   setupHint: { color: '#9ca3af', fontSize: 13, fontWeight: '600' },
   eyeAnnouncement: { color: '#fff', fontSize: 18, fontWeight: '700', marginBottom: 16 },
-
   calibContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   calibCard: { backgroundColor: 'rgba(0,0,0,0.92)', borderRadius: 24, padding: 32, alignItems: 'center', minWidth: 240 },
   calibIcon: { fontSize: 48, marginBottom: 12 },
   calibTitle: { color: '#fff', fontSize: 24, fontWeight: '800', marginBottom: 8 },
   calibSubtitle: { color: '#cbd5e1', fontSize: 14, textAlign: 'center', marginBottom: 20 },
   calibCountdown: { color: '#10b981', fontSize: 64, fontWeight: '800' },
-
   testContainer: { flex: 1, paddingTop: Platform.OS === 'ios' ? 100 : 80, paddingHorizontal: 16, paddingBottom: Platform.OS === 'ios' ? 32 : 20, backgroundColor: '#fafafa' },
   statsBar: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 16, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: '#f0f0f0' },
   statItem: { flex: 1, alignItems: 'center' },
@@ -956,20 +1129,10 @@ const styles = StyleSheet.create({
   directionPad: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'center' },
   directionButton: { width: (SCREEN_WIDTH - 48) / 2, aspectRatio: 1.5, borderRadius: 16, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center' },
   directionIcon: { fontSize: 40, color: '#fff', fontWeight: '700' },
-
-  // far point — black box for blue stimulus (LCA)
   farPointContainer: { flex: 1, paddingTop: Platform.OS === 'ios' ? 100 : 80, paddingHorizontal: 20, paddingBottom: Platform.OS === 'ios' ? 32 : 20, backgroundColor: '#fafafa' },
   farPointTitle: { fontSize: 22, fontWeight: '800', color: '#000', marginBottom: 6 },
   farPointSubtitle: { fontSize: 14, color: '#666', lineHeight: 20, marginBottom: 16 },
-  farPointStimulusBoxBlue: {
-    backgroundColor: FARPOINT_BG,                  // #000
-    borderRadius: 20,
-    paddingVertical: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    minHeight: 240,
-  },
+  farPointStimulusBoxBlue: { backgroundColor: FARPOINT_BG, borderRadius: 20, paddingVertical: 32, alignItems: 'center', justifyContent: 'center', marginBottom: 16, minHeight: 240 },
   farPointReadouts: { flexDirection: 'row', gap: 12, marginBottom: 12 },
   farPointReadout: { flex: 1, backgroundColor: '#fff', borderRadius: 12, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: '#f0f0f0' },
   farPointReadoutLabel: { fontSize: 11, color: '#666', marginBottom: 4, fontWeight: '600', letterSpacing: 0.5 },
@@ -982,14 +1145,20 @@ const styles = StyleSheet.create({
   captureButton: { backgroundColor: '#10b981', borderRadius: 16, padding: 18, alignItems: 'center' },
   captureButtonAmber: { backgroundColor: '#f59e0b' },
   captureButtonText: { fontSize: 18, fontWeight: '800', color: '#fff' },
-
   pauseOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.75)', alignItems: 'center', justifyContent: 'center', zIndex: 100 },
   pauseCard: { backgroundColor: '#fff', borderRadius: 20, padding: 28, alignItems: 'center', width: '80%' },
   pauseIcon: { fontSize: 48, marginBottom: 8 },
   pauseTitle: { fontSize: 22, fontWeight: '800', color: '#000', marginBottom: 8 },
   pauseReason: { fontSize: 16, color: '#ef4444', fontWeight: '600', textAlign: 'center', marginBottom: 12 },
   pauseHint: { fontSize: 13, color: '#9ca3af' },
-
+  retestOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', alignItems: 'center', justifyContent: 'center', zIndex: 200 },
+  retestCard: { backgroundColor: '#fff', borderRadius: 20, padding: 28, alignItems: 'center', width: '85%' },
+  retestIcon: { fontSize: 48, marginBottom: 8, color: '#f59e0b' },
+  retestTitle: { fontSize: 22, fontWeight: '800', color: '#000', marginBottom: 12, textAlign: 'center' },
+  retestReason: { fontSize: 14, color: '#ef4444', fontWeight: '600', textAlign: 'center', marginBottom: 12, lineHeight: 21 },
+  retestHint: { fontSize: 13, color: '#666', textAlign: 'center', lineHeight: 20, marginBottom: 20 },
+  retestButton: { backgroundColor: '#000', borderRadius: 12, paddingHorizontal: 24, paddingVertical: 14 },
+  retestButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   resultsScroll: { backgroundColor: '#fff' },
   resultsHeader: { backgroundColor: '#fff', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 32, alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
   completeBadge: { backgroundColor: '#10b981', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, marginBottom: 16 },
