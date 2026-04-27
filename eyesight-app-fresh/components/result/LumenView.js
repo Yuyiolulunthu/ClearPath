@@ -258,7 +258,7 @@ export default function LumenView({
       <View style={styles.header}>
         <View style={styles.brandRow}>
           <View style={styles.brandDot} />
-          <Text style={styles.brandName}>ClearPath</Text>
+          <Text style={styles.brandName}>ALL GOOD VISION</Text>
         </View>
         <Text style={styles.dateText}>{dateLabel}</Text>
       </View>
@@ -304,7 +304,7 @@ export default function LumenView({
 
       <View style={styles.footerNote}>
         <Text style={styles.footerNoteText}>
-          ClearPath currently measures Distance and Focus. Near, Light, Contrast, and
+          ALL GOOD VISION currently measures Distance and Focus. Near, Light, Contrast, and
           Colour assessments are on the development roadmap.
         </Text>
       </View>

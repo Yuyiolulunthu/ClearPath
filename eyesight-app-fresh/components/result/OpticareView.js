@@ -66,7 +66,7 @@ export default function OpticareView({
     >
       {/* Header — clinic-card style */}
       <View style={styles.headerCenter}>
-        <Text style={styles.clinicName}>ClearPath Screening</Text>
+        <Text style={styles.clinicName}>ALL GOOD VISION Screening</Text>
         <Text style={styles.clinicAddr}>SMARTPHONE-BASED REFRACTION</Text>
       </View>
 
